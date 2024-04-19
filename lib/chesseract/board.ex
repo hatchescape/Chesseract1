@@ -17,7 +17,7 @@ defmodule Chesseract.Board do
 
     select_coordinates(%Chesseract.Board{positions: positions})
 
-    %__MODULE__{positions: positions}
+  #  %__MODULE__{positions: positions}
   end
 
   defp do_row(), do: Enum.reduce(@ranks, [], fn ranks, acc -> [do_row(ranks) | acc] end)
@@ -76,51 +76,39 @@ defmodule Chesseract.Board do
 
     case test do
       [{_, "r"}] ->
-        IO.inspect("got here")
         brmoves(lheight, lwidth, lranks, lfiles)
 
       [{_, "R"}] ->
-        IO.inspect("got here")
         wrmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       [{_, "n"}] ->
-        IO.inspect("got here")
         bnmoves(lheight, lwidth, lranks, lfiles)
 
       [{_, "N"}] ->
-        IO.inspect("got here")
         wnmoves(lheight, lwidth, lranks, lfiles)
 
       [{_, "b"}] ->
-        IO.inspect("got here")
         bbmoves(lheight, lwidth, lranks, lfiles)
 
       [{_, "B"}] ->
-        IO.inspect("got here")
         wbmoves(lheight, lwidth, lranks, lfiles)
 
       [{_, "k"}] ->
-        IO.inspect("got here")
         bkmoves(lheight, lwidth, lranks, lfiles)
 
       [{_, "K"}] ->
-        IO.inspect("got here")
         wkmoves(lheight, lwidth, lranks, lfiles)
 
       [{_, "q"}] ->
-        IO.inspect("got here")
         bqmoves(lheight, lwidth, lranks, lfiles)
 
       [{_, "Q"}] ->
-        IO.inspect("got here")
         wqmoves(lheight, lwidth, lranks, lfiles)
 
       [{_, "p"}] ->
-        IO.inspect("got here")
         bpmoves(lheight, lwidth, lranks, lfiles)
 
       [{_, "P"}] ->
-        IO.inspect("got here")
         wpmoves(lheight, lwidth, lranks, lfiles)
 
       result ->
@@ -157,19 +145,14 @@ defmodule Chesseract.Board do
     file_moves = for files <- 1..8, lfiles != files, do: {lheight, lwidth, lranks, files}
 
     height_moves ++ width_moves ++ rank_moves ++ file_moves
-    |> IO.inspect()
+   # |> IO.inspect()
     |> Enum.each(&weak_inspect_coord(%Chesseract.Board{positions: positions}, &1))
-    |> Enum.each(&is_piece?(%Chesseract.Board{positions: positions}, &1))
+   # |> Enum.each(&is_piece?(%Chesseract.Board{positions: positions}, &1))
   end
 
-  def is_piece?(%Chesseract.Board{positions: positions}, input) do
-    test =
-      [head | tail] = input
-      tail
 
-    IO.inspect(test)
-  end
   def weak_inspect_coord(%Chesseract.Board{positions: positions}, input) do
+    IO.puts("weak_inspect_coord started")
     {lheight, lwidth, lranks, lfiles} = input
 
     test =
@@ -177,7 +160,59 @@ defmodule Chesseract.Board do
         key == :"H#{lheight},W#{lwidth},R#{lranks},F#{lfiles}"
       end)
 
-    IO.inspect(test)
+   # IO.inspect(test)
+    |> Enum.filter(fn pass -> is_piece?(%Chesseract.Board{positions: positions}, pass) end)
+    |> Enum.each(&is_piece?(%Chesseract.Board{positions: positions}, &1))
+    |> IO.inspect()
+  end
+
+  def is_piece?(%Chesseract.Board{positions: positions}, input) do
+    IO.puts("is_piece started")
+    test =
+      thing = Tuple.to_list(input)
+       if List.last(thing) == nil do
+        :thisIsNil
+       else
+       Enum.filter(thing, &is_integer/1)
+       |> Enum.map(&add_stuff(%Chesseract.Board{positions: positions}, &1))
+       end
+  #  IO.inspect(test)
+  end
+
+
+  def add_stuff(%Chesseract.Board{positions: positions}, input) do
+    IO.puts("add_stuff started")
+
+   test =
+    x = [1.. 7]
+    weaker_inspect_coord(%Chesseract.Board{positions: positions}, (input + x))
+    weaker_inspect_coord(%Chesseract.Board{positions: positions}, (input - x))
+  IO.inspect(test)
+  end
+
+  def weaker_inspect_coord(%Chesseract.Board{positions: positions}, input) do
+    IO.puts("weaker_inspect_coord started")
+    {lheight, lwidth, lranks, lfiles} = input
+
+    test =
+      Enum.filter(positions, fn {key, _value} ->
+        key == :"H#{lheight},W#{lwidth},R#{lranks},F#{lfiles}"
+      end)
+
+  #  IO.inspect(test)
+    |> Enum.filter(fn pass -> lesser_is_piece?(%Chesseract.Board{positions: positions}, pass) end)
+  end
+
+  def lesser_is_piece?(%Chesseract.Board{positions: positions}, input) do
+    IO.puts("is_piece started")
+    test =
+      thing = Tuple.to_list(input)
+       if List.last(thing) == nil do
+        :thisIsNil
+       else
+       Enum.filter(thing, &is_integer/1)
+       end
+  #  IO.inspect(test)
   end
 
   def bnmoves(lheight, lwidth, lranks, lfiles) do
@@ -219,6 +254,11 @@ defmodule Chesseract.Board do
   def wpmoves(lheight, lwidth, lranks, lfiles) do
     IO.puts("there's a white pawn here!")
   end
+end
+
+
+
+
 
   # case Enum.(@height[lheight], @width[lwidth], @files[lfiles], @ranks[lranks]) do
   #   nil ->
@@ -232,7 +272,6 @@ defmodule Chesseract.Board do
   #       for files <- 1..8, lfiles != files, do: IO.puts "{#{height}, #{width}, #{ranks}, #{files}}"
   #     end
   # end
-end
 
 # Enum.filter(Board.positions, fn {key,_value} -> key == {lheight,lwidth,lranks,lfiles} end)
 # Keyword.values(Board.positions) |> Enum.at(0)
