@@ -60,7 +60,7 @@ defmodule Chesseract.Board do
     end
   end
 
-  def select_coordinates(%Chesseract.Board{positions: positions}) do
+  def select_coordinates(%Chesseract.Board{positions: positions}) do #divide into white turn and black turn
     [lheight, lwidth, lranks, lfiles] =
       IO.gets("Please enter coordinates in the format H,W,R,F:")
       |> String.trim()
@@ -76,40 +76,40 @@ defmodule Chesseract.Board do
 
     case test do
       [{_, "r"}] ->
-        brmoves(lheight, lwidth, lranks, lfiles)
+        brmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       [{_, "R"}] ->
         wrmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       [{_, "n"}] ->
-        bnmoves(lheight, lwidth, lranks, lfiles)
+        bnmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       [{_, "N"}] ->
-        wnmoves(lheight, lwidth, lranks, lfiles)
+        wnmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       [{_, "b"}] ->
-        bbmoves(lheight, lwidth, lranks, lfiles)
+        bbmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       [{_, "B"}] ->
-        wbmoves(lheight, lwidth, lranks, lfiles)
+        wbmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       [{_, "k"}] ->
-        bkmoves(lheight, lwidth, lranks, lfiles)
+        bkmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       [{_, "K"}] ->
-        wkmoves(lheight, lwidth, lranks, lfiles)
+        wkmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       [{_, "q"}] ->
-        bqmoves(lheight, lwidth, lranks, lfiles)
+        bqmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       [{_, "Q"}] ->
-        wqmoves(lheight, lwidth, lranks, lfiles)
+        wqmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       [{_, "p"}] ->
-        bpmoves(lheight, lwidth, lranks, lfiles)
+        bpmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       [{_, "P"}] ->
-        wpmoves(lheight, lwidth, lranks, lfiles)
+        wpmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions})
 
       result ->
         IO.inspect(result)
@@ -117,7 +117,7 @@ defmodule Chesseract.Board do
     end
   end
 
-  def brmoves(lheight, lwidth, lranks, lfiles) do
+  def brmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions}) do
     IO.puts("there's a black rook here!")
 
     for height <- 1..2,
@@ -146,112 +146,142 @@ defmodule Chesseract.Board do
 
     height_moves ++ width_moves ++ rank_moves ++ file_moves
    # |> IO.inspect()
-    |> Enum.each(&weak_inspect_coord(%Chesseract.Board{positions: positions}, &1))
-   # |> Enum.each(&is_piece?(%Chesseract.Board{positions: positions}, &1))
+    |> Enum.map(&find_coord(%Chesseract.Board{positions: positions}, &1))
+    |> List.flatten() #here are all rook moves from coord with pieces, should proabably trim further to exclude player pieces
+    |> Enum.map(&trim_coord(&1))
+    |> Enum.map(&rook_stuff(%Chesseract.Board{positions: positions}, &1, lheight, lwidth, lranks, lfiles)) #returns list of all invalid passed-piece rook moves, if I invert it will it return only valid? No, because of overlap, shit. Oh well.
   end
 
 
-  def weak_inspect_coord(%Chesseract.Board{positions: positions}, input) do
-    IO.puts("weak_inspect_coord started")
+  defp find_coord(%Chesseract.Board{positions: positions}, input) do
+   # IO.puts("weak_inspect_coord started")
     {lheight, lwidth, lranks, lfiles} = input
 
     test =
-      Enum.filter(positions, fn {key, _value} ->
-        key == :"H#{lheight},W#{lwidth},R#{lranks},F#{lfiles}"
+      Enum.filter(positions, fn {key, value} ->
+        key == :"H#{lheight},W#{lwidth},R#{lranks},F#{lfiles}" and value != nil
       end)
-
-   # IO.inspect(test)
-    |> Enum.filter(fn pass -> is_piece?(%Chesseract.Board{positions: positions}, pass) end)
-    |> Enum.each(&is_piece?(%Chesseract.Board{positions: positions}, &1))
-    |> IO.inspect()
+    test
   end
 
-  def is_piece?(%Chesseract.Board{positions: positions}, input) do
-    IO.puts("is_piece started")
-    test =
-      thing = Tuple.to_list(input)
-       if List.last(thing) == nil do
-        :thisIsNil
-       else
-       Enum.filter(thing, &is_integer/1)
-       |> Enum.map(&add_stuff(%Chesseract.Board{positions: positions}, &1))
-       end
-  #  IO.inspect(test)
+  def trim_coord(input) do
+    IO.puts("trim_coord started")
+    IO.inspect(input)
+
+    pass = to_string(elem(input, 0))
+    split_input = String.split(pass, ",")
+    integers = Enum.map(split_input, fn str ->
+      str
+      |> String.replace(~r/\D/, "")
+      |> String.to_integer()
+    end)
+
+    integers
   end
 
 
-  def add_stuff(%Chesseract.Board{positions: positions}, input) do
-    IO.puts("add_stuff started")
+  def rook_stuff(%Chesseract.Board{positions: positions}, input, lheight, lwidth, lranks, lfiles) do
+    IO.puts("rook_stuff started")
+    range = 1..7
+    first = Enum.at(input, 0)
+    second = Enum.at(input, 1)
+    third = Enum.at(input, 2)
+    fourth = Enum.at(input, 3)
+    list = [first, second, third, fourth]
+    IO.puts("#{list}")
 
-   test =
-    x = [1.. 7]
-    weaker_inspect_coord(%Chesseract.Board{positions: positions}, (input + x))
-    weaker_inspect_coord(%Chesseract.Board{positions: positions}, (input - x))
-  IO.inspect(test)
-  end
+    part1 = cond do
+      first > lheight ->
+        Enum.map(range, fn r -> first + r end)
+      first < lheight ->
+        Enum.map(range, fn r -> first - r end)
+      true ->
+        nil
+    end
+    part2 = cond do
+      second > lwidth ->
+        Enum.map(range, fn r -> second + r end)
+      second < lwidth ->
+        Enum.map(range, fn r -> second - r end)
+      true ->
+        nil
+    end
+    part3 = cond do
+      third > lranks ->
+        Enum.map(range, fn r -> third + r end)
+      third < lranks ->
+        Enum.map(range, fn r -> third - r end)
+      true ->
+        nil
+    end
+    part4 = cond do
+      fourth > lfiles ->
+        Enum.map(range, fn r -> fourth + r end)
+      fourth < lfiles ->
+        Enum.map(range, fn r -> fourth - r end)
+      true ->
+        nil
+    end
+    IO.inspect(part1)
+    IO.inspect(part2)
+    IO.inspect(part3)
+    IO.inspect(part4)
+    if part1 !== nil do
+      Enum.map(part1, fn x -> [x] ++ [second] ++ [third] ++ [fourth] end) end
+    if part2 !== nil do
+      Enum.map(part2, fn x -> [first] ++ [x] ++ [third] ++ [fourth] end) end
+    if part3 !== nil do
+      Enum.map(part3, fn x -> [first] ++ [second] ++ [x] ++ [fourth] end) end
+    if part4 !== nil do
+      Enum.map(part4, fn x -> [first] ++ [second] ++ [third] ++ [x] end) end
+    end
 
-  def weaker_inspect_coord(%Chesseract.Board{positions: positions}, input) do
-    IO.puts("weaker_inspect_coord started")
-    {lheight, lwidth, lranks, lfiles} = input
+    # Enum.map(range, fn r -> Enum.at(part1, r) ++ Enum.at(part2, r) ++ Enum.at(part3, r) ++ Enum.at(part4, r) end)
+    # |> IO.inspect()
 
-    test =
-      Enum.filter(positions, fn {key, _value} ->
-        key == :"H#{lheight},W#{lwidth},R#{lranks},F#{lfiles}"
-      end)
+    # |> Enum.map(fn elem ->
+    #   IO.inspect elem
+      # loop through the range and create a new list
+   # end)
 
-  #  IO.inspect(test)
-    |> Enum.filter(fn pass -> lesser_is_piece?(%Chesseract.Board{positions: positions}, pass) end)
-  end
 
-  def lesser_is_piece?(%Chesseract.Board{positions: positions}, input) do
-    IO.puts("is_piece started")
-    test =
-      thing = Tuple.to_list(input)
-       if List.last(thing) == nil do
-        :thisIsNil
-       else
-       Enum.filter(thing, &is_integer/1)
-       end
-  #  IO.inspect(test)
-  end
-
-  def bnmoves(lheight, lwidth, lranks, lfiles) do
+  def bnmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions}) do
     IO.puts("there's a black knight here!")
   end
 
-  def wnmoves(lheight, lwidth, lranks, lfiles) do
+  def wnmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions}) do
     IO.puts("there's a white knight here!")
   end
 
-  def bbmoves(lheight, lwidth, lranks, lfiles) do
+  def bbmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions}) do
     IO.puts("there's a black bishop here!")
   end
 
-  def wbmoves(lheight, lwidth, lranks, lfiles) do
+  def wbmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions}) do
     IO.puts("there's a white bishop here!")
   end
 
-  def bkmoves(lheight, lwidth, lranks, lfiles) do
+  def bkmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions}) do
     IO.puts("there's a black king here!")
   end
 
-  def wkmoves(lheight, lwidth, lranks, lfiles) do
+  def wkmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions}) do
     IO.puts("there's a white king here!")
   end
 
-  def bqmoves(lheight, lwidth, lranks, lfiles) do
+  def bqmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions}) do
     IO.puts("there's a black queen here!")
   end
 
-  def wqmoves(lheight, lwidth, lranks, lfiles) do
+  def wqmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions}) do
     IO.puts("there's a white queen here!")
   end
 
-  def bpmoves(lheight, lwidth, lranks, lfiles) do
+  def bpmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions}) do
     IO.puts("there's a black pawn here!")
   end
 
-  def wpmoves(lheight, lwidth, lranks, lfiles) do
+  def wpmoves(lheight, lwidth, lranks, lfiles, %Chesseract.Board{positions: positions}) do
     IO.puts("there's a white pawn here!")
   end
 end
